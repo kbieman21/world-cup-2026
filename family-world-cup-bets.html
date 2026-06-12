@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 Family World Cup 2026 Prediction Pool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 15px; background: #f0f8f0; line-height: 1.5; }
+        h1 { color: #006400; text-align: center; }
+        .tab { display: flex; margin-bottom: 10px; flex-wrap: wrap; }
+        .tab button { flex: 1; padding: 14px; font-size: 17px; border: none; background: #ddd; margin: 2px; }
+        .tab button.active { background: #006400; color: white; }
+        .content { display: none; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .content.active { display: block; }
+        .match { border: 1px solid #ccc; padding: 12px; margin: 10px 0; border-radius: 8px; background: #fafafa; }
+        select, input { padding: 8px; font-size: 16px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { padding: 12px 20px; font-size: 16px; background: #006400; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px 2px; }
+        button:hover { background: #004d00; }
+        .instructions { background: #e6ffe6; padding: 12px; border-radius: 5px; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        th { background: #006400; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🏆 Family World Cup 2026 Prediction Pool</h1>
+
+    <div class="tab">
+        <button class="active" onclick="openTab(0)">1. Players & Backup</button>
+        <button onclick="openTab(1)">2. My Predictions</button>
+        <button onclick="openTab(2)">3. Leaderboard</button>
+    </div>
+
+    <div id="tab0" class="content active">
+        <div class="instructions">
+            <strong>Add all family members (~20)</strong><br>
+            Export your data regularly as backup!
+        </div>
+        <input type="text" id="newPlayer" placeholder="Enter name (e.g. Uncle Bob)">
+        <button onclick="addPlayer()">Add Player</button>
+        <table id="playersTable"></table>
+
+        <hr style="margin:20px 0;">
+        <button onclick="exportData()">📤 Export Backup (JSON)</button>
+        <button onclick="document.getElementById('importFile').click()">📥 Import Backup</button>
+        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+    </div>
+
+    <div id="tab1" class="content">
+        <div class="instructions">
+            <strong>Select your name → Make predictions</strong><br>
+            You can pick the same team as others. Draws allowed!
+        </div>
+        <select id="currentPlayer" onchange="loadPlayerPredictions()"></select>
+        <div id="matchesList"></div>
+    </div>
+
+    <div id="tab2" class="content">
+        <div class="instructions">
+            <strong>Leaderboard — One person enters real results</strong><br>
+            Scoring: <strong>3 pts</strong> correct winner/draw + <strong>+2 pts</strong> exact score
+        </div>
+        <table id="leaderboardTable"></table>
+    </div>
+
+    <script>
+        let players = JSON.parse(localStorage.getItem('wcPlayers')) || ["Mom", "Dad", "Alex", "Sara"];
+        let matches = JSON.parse(localStorage.getItem('wcMatches')) || [
+            {id:1, team1:"Mexico", team2:"South Africa", date:"June 11", actual:"2-0"},
+            {id:2, team1:"Korea Republic", team2:"Czechia", date:"June 11", actual:"2-1"}
+        ];
+        let predictions = JSON.parse(localStorage.getItem('wcPredictions')) || {};
+
+        function saveData() {
+            localStorage.setItem('wcPlayers', JSON.stringify(players));
+            localStorage.setItem('wcMatches', JSON.stringify(matches));
+            localStorage.setItem('wcPredictions', JSON.stringify(predictions));
+        }
+
+        function renderPlayers() {
+            const tbody = document.getElementById('playersTable');
+            tbody.innerHTML = `<tr><th>Family Members</th><th>Action</th></tr>`;
+            players.forEach((p, i) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${p}</td><td><button onclick="removePlayer(${i})">Remove</button></td>`;
+                tbody.appendChild(row);
+            });
+            renderPlayerSelect();
+        }
+
+        function renderPlayerSelect() {
+            const select = document.getElementById('currentPlayer');
+            select.innerHTML = '<option value="">Select your name</option>';
+            players.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p; opt.textContent = p;
+                select.appendChild(opt);
+            });
+        }
+
+        function addPlayer() {
+            const name = document.getElementById('newPlayer').value.trim();
+            if (name && !players.includes(name)) {
+                players.push(name);
+                renderPlayers();
+                saveData();
+            }
+        }
+
+        function removePlayer(i) {
+            if (confirm("Remove this player?")) {
+                players.splice(i, 1);
+                renderPlayers();
+                saveData();
+            }
+        }
+
+        function loadPlayerPredictions() {
+            const player = document.getElementById('currentPlayer').value;
+            if (!player) return;
+            renderMatchesForPlayer(player);
+        }
+
+        function renderMatchesForPlayer(player) {
+            const list = document.getElementById('matchesList');
+            list.innerHTML = `<h3>Predictions for ${player}</h3>`;
+            matches.forEach((m, idx) => {
+                const playerPred = (predictions[player] && predictions[player][m.id]) || {};
+                const div = document.createElement('div');
+                div.className = 'match';
+                div.innerHTML = `
+                    <strong>${m.team1} vs ${m.team2}</strong> (${m.date})<br>
+                    <select onchange="savePlayerPrediction('${player}', ${m.id}, 'winner', this.value)">
+                        <option value="">Pick winner / draw</option>
+                        <option value="${m.team1}" ${playerPred.winner === m.team1 ? 'selected' : ''}>${m.team1} wins</option>
+                        <option value="Draw" ${playerPred.winner === 'Draw' ? 'selected' : ''}>Draw</option>
+                        <option value="${m.team2}" ${playerPred.winner === m.team2 ? 'selected' : ''}>${m.team2} wins</option>
+                    </select>
+                    <input type="text" value="${playerPred.score || ''}" placeholder="Exact score (e.g. 2-1)" 
+                           onchange="savePlayerPrediction('${player}', ${m.id}, 'score', this.value)">
+                    <div style="margin-top:8px; color:#006400;">
+                        Actual: <input type="text" value="${m.actual || ''}" placeholder="e.g. 2-0" 
+                                       onchange="updateActual(${idx}, this.value)" style="width:100px;">
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function savePlayerPrediction(player, matchId, field, value) {
+            if (!predictions[player]) predictions[player] = {};
+            if (!predictions[player][matchId]) predictions[player][matchId] = {};
+            predictions[player][matchId][field] = value;
+            saveData();
+            if (document.getElementById('tab2').classList.contains('active')) calculateAndRenderLeaderboard();
+        }
+
+        function updateActual(idx, score) {
+            matches[idx].actual = score.trim();
+            saveData();
+            calculateAndRenderLeaderboard();
+        }
+
+        function parseScore(scoreStr) {
+            if (!scoreStr) return null;
+            const parts = scoreStr.split('-').map(s => parseInt(s.trim()));
+            return (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) ? parts : null;
+        }
+
+        function calculatePoints(playerPred, actualScoreStr, match) {
+            if (!playerPred.winner || !actualScoreStr) return 0;
+            const actualGoals = parseScore(actualScoreStr);
+            if (!actualGoals) return 0;
+
+            const actualHome = actualGoals[0];
+            const actualAway = actualGoals[1];
+            const actualOutcome = actualHome > actualAway ? match.team1 : (actualHome < actualAway ? match.team2 : "Draw");
+
+            let points = 0;
+
+            // Correct winner / draw
+            if ((playerPred.winner === match.team1 && actualOutcome === match.team1) ||
+                (playerPred.winner === match.team2 && actualOutcome === match.team2) ||
+                (playerPred.winner === "Draw" && actualOutcome === "Draw")) {
+                points += 3;
+            }
+
+            // Exact score bonus
+            const predGoals = parseScore(playerPred.score);
+            if (predGoals && predGoals[0] === actualHome && predGoals[1] === actualAway) {
+                points += 2;
+            }
+
+            return points;
+        }
+
+        function calculateAndRenderLeaderboard() {
+            const tbody = document.getElementById('leaderboardTable');
+            tbody.innerHTML = `<tr><th>Rank</th><th>Player</th><th>Points</th></tr>`;
+
+            const playerPoints = players.map(player => {
+                let total = 0;
+                if (predictions[player]) {
+                    Object.keys(predictions[player]).forEach(mid => {
+                        const pred = predictions[player][mid];
+                        const match = matches.find(m => m.id == mid);
+                        if (match && match.actual) {
+                            total += calculatePoints(pred, match.actual, match);
+                        }
+                    });
+                }
+                return {player, points: total};
+            });
+
+            playerPoints.sort((a, b) => b.points - a.points);
+
+            playerPoints.forEach((entry, rank) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${rank + 1}</td><td>${entry.player}</td><td style="font-weight:bold;color:#006400;">${entry.points}</td>`;
+                tbody.appendChild(row);
+            });
+        }
+
+        function exportData() {
+            const data = { players, matches, predictions, timestamp: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `world-cup-pool-backup-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert("✅ Backup downloaded! Save this file safely.");
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.players) players = data.players;
+                    if (data.matches) matches = data.matches;
+                    if (data.predictions) predictions = data.predictions;
+                    saveData();
+                    renderPlayers();
+                    calculateAndRenderLeaderboard();
+                    alert("✅ Data restored successfully!");
+                } catch (err) {
+                    alert("❌ Invalid backup file.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function openTab(n) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab' + n).classList.add('active');
+            document.querySelectorAll('.tab button').forEach((b, i) => b.classList.toggle('active', i === n));
+            if (n === 1) loadPlayerPredictions();
+            if (n === 2) calculateAndRenderLeaderboard();
+        }
+
+        // Initialize
+        renderPlayers();
+        calculateAndRenderLeaderboard();
+    </script>
+</body>
+</html>
