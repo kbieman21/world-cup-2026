@@ -162,13 +162,14 @@
             }
         }
 
-        function removePlayer(i) {
-            if (confirm("Remove this player?")) {
-                players.splice(i, 1);
-                saveToFirebase('players', players);
-            }
-        }
+        // function removePlayer(i) {
+        //     if (confirm("Remove this player?")) {
+        //         players.splice(i, 1);
+        //         saveToFirebase('players', players);
+        //     }
+        // }
 
+        
         function addNewMatch() {
             const t1 = prompt("Team 1:");
             const t2 = prompt("Team 2:");
