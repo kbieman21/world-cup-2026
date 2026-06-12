@@ -30,46 +30,49 @@
     <div class="tab">
         <button class="active" onclick="openTab(0)">1. Players & Add Matches</button>
         <button onclick="openTab(1)">2. My Predictions</button>
-        <button onclick="openTab(2)">3. Leaderboard</button>
+        <button onclick="openTab(2)">3. Leaderboard (Admin Only)</button>
     </div>
 
     <div id="tab0" class="content active">
-        <div class="instructions">
-            <strong>Add family members + New Matches (Admin)</strong><br>
-            Use the button below to add future matches
-        </div>
+        <div class="instructions"><strong>Admin Tools</strong></div>
         <input type="text" id="newPlayer" placeholder="Enter name">
         <button onclick="addPlayer()">Add Player</button>
         <button onclick="addNewMatch()">+ Add New Match</button>
+        <button onclick="safeReset()" style="background:#d9534f;">🔄 Reset Database (Admin)</button>
         <table id="playersTable"></table>
     </div>
 
     <div id="tab1" class="content">
-        <div class="instructions"><strong>Select your name → Predict</strong></div>
+        <div class="instructions"><strong>Select your name → Make predictions</strong></div>
         <select id="currentPlayer" onchange="loadPlayerPredictions()"></select>
         <div id="matchesList"></div>
     </div>
 
     <div id="tab2" class="content">
-        <div class="instructions"><strong>Leaderboard — Update actual scores here</strong><br>
-            3 pts correct winner/draw + 2 pts exact score</div>
-        <table id="leaderboardTable"></table>
+        <div class="instructions">
+            <strong>🔒 Admin Only</strong><br>
+            <input type="password" id="adminPassword" placeholder="Enter admin password" style="width:280px;">
+            <button onclick="checkAdminPassword()">Unlock Leaderboard</button>
+        </div>
+        <div id="leaderboardContent" style="display:none;">
+            <table id="leaderboardTable"></table>
+        </div>
     </div>
 
     <script>
         // ==================== YOUR FIREBASE CONFIG ====================
-         // Your web app's Firebase configuration
-            const firebaseConfig = {
-                apiKey: "AIzaSyDDy4VXUPWiOOZHZ2eiIt3qRVRgvjeET3E",
-                authDomain: "family-world-cup-2026-pool.firebaseapp.com",
-                databaseURL: "https://family-world-cup-2026-pool-default-rtdb.firebaseio.com",
-                projectId: "family-world-cup-2026-pool",
-                storageBucket: "family-world-cup-2026-pool.firebasestorage.app",
-                messagingSenderId: "615728714468",
-                appId: "1:615728714468:web:baa9835731188b334392f1"
-            };
-
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY_HERE",
+            authDomain: "your-project.firebaseapp.com",
+            databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:xxxxxxxxxxxxxxxx"
+        };
         // ============================================================
+
+        const ADMIN_PASSWORD = "wanchaalem2026";   // ← CHANGE THIS TO YOUR SECRET PASSWORD
 
         let app, db;
         let players = [];
@@ -89,29 +92,24 @@
             });
 
             db.ref('matches').once('value', (snap) => {
-                if (!snap.exists() || !snap.val() || snap.val().length === 0) {
-                    const defaultMatches = [
+                if (!snap.exists() || snap.val().length === 0) {
+                    const defaults = [
                         {id:1, team1:"Mexico", team2:"South Africa", date:"June 11", actual:""},
                         {id:2, team1:"Korea Republic", team2:"Czechia", date:"June 11", actual:""},
                         {id:3, team1:"Canada", team2:"Bosnia and Herzegovina", date:"June 12", actual:""},
-                        {id:4, team1:"USA", team2:"Paraguay", date:"June 12", actual:""},
-                        {id:5, team1:"Qatar", team2:"Switzerland", date:"June 13", actual:""},
-                        {id:6, team1:"Brazil", team2:"Morocco", date:"June 13", actual:""}
+                        {id:4, team1:"USA", team2:"Paraguay", date:"June 12", actual:""}
                     ];
-                    saveToFirebase('matches', defaultMatches);
-                    matches = defaultMatches;
+                    saveToFirebase('matches', defaults);
+                    matches = defaults;
                 } else {
                     matches = snap.val();
                 }
             });
 
-            db.ref('matches').on('value', (snap) => {
-                if (snap.val()) matches = snap.val();
-            });
+            db.ref('matches').on('value', (snap) => { if (snap.val()) matches = snap.val(); });
 
             db.ref('predictions').on('value', (snap) => {
                 predictions = snap.val() || {};
-                if (document.getElementById('tab2').classList.contains('active')) calculateAndRenderLeaderboard();
             });
         }
 
@@ -156,14 +154,37 @@
         }
 
         function addNewMatch() {
-            const team1 = prompt("Enter Team 1 name:");
-            const team2 = prompt("Enter Team 2 name:");
-            const date = prompt("Enter date (e.g. June 15):", "June 15");
-            if (team1 && team2 && date) {
-                const newId = matches.length > 0 ? Math.max(...matches.map(m => m.id)) + 1 : 1;
-                matches.push({id: newId, team1: team1.trim(), team2: team2.trim(), date: date.trim(), actual: ""});
+            const t1 = prompt("Team 1:");
+            const t2 = prompt("Team 2:");
+            const d = prompt("Date (e.g. June 15):", "June 15");
+            if (t1 && t2) {
+                const newId = matches.length ? Math.max(...matches.map(m => m.id)) + 1 : 1;
+                matches.push({id: newId, team1: t1, team2: t2, date: d, actual: ""});
                 saveToFirebase('matches', matches);
-                alert("✅ New match added!");
+            }
+        }
+
+        function safeReset() {
+            const pass = prompt("Enter admin password to reset:");
+            if (pass === ADMIN_PASSWORD) {
+                if (confirm("⚠️ Delete ALL players and predictions?")) {
+                    saveToFirebase('players', []);
+                    saveToFirebase('predictions', {});
+                    alert("Database reset.");
+                    location.reload();
+                }
+            } else {
+                alert("Wrong password.");
+            }
+        }
+
+        function checkAdminPassword() {
+            const entered = document.getElementById('adminPassword').value;
+            if (entered === ADMIN_PASSWORD) {
+                document.getElementById('leaderboardContent').style.display = 'block';
+                calculateAndRenderLeaderboard();
+            } else {
+                alert("❌ Wrong password!");
             }
         }
 
@@ -176,23 +197,21 @@
         function renderMatchesForPlayer(player) {
             const list = document.getElementById('matchesList');
             list.innerHTML = `<h3>Predictions for ${player}</h3>`;
-            matches.forEach((m) => {
-                const playerPred = (predictions[player] && predictions[player][m.id]) || {};
+            matches.forEach(m => {
+                const pred = (predictions[player] && predictions[player][m.id]) || {};
                 const div = document.createElement('div');
                 div.className = 'match';
                 div.innerHTML = `
                     <strong>${m.team1} vs ${m.team2}</strong> (${m.date})<br>
                     <select onchange="savePrediction('${player}', ${m.id}, 'winner', this.value)">
                         <option value="">Pick winner / draw</option>
-                        <option value="${m.team1}" ${playerPred.winner === m.team1 ? 'selected' : ''}>${m.team1} wins</option>
-                        <option value="Draw" ${playerPred.winner === 'Draw' ? 'selected' : ''}>Draw</option>
-                        <option value="${m.team2}" ${playerPred.winner === m.team2 ? 'selected' : ''}>${m.team2} wins</option>
+                        <option value="${m.team1}" ${pred.winner === m.team1 ? 'selected' : ''}>${m.team1} wins</option>
+                        <option value="Draw" ${pred.winner === 'Draw' ? 'selected' : ''}>Draw</option>
+                        <option value="${m.team2}" ${pred.winner === m.team2 ? 'selected' : ''}>${m.team2} wins</option>
                     </select>
-                    <input type="text" value="${playerPred.score || ''}" placeholder="Exact score (e.g. 2-1)" 
-                           onchange="savePrediction('${player}', ${m.id}, 'score', this.value)">
+                    <input type="text" value="${pred.score || ''}" placeholder="Exact score e.g. 2-1" onchange="savePrediction('${player}', ${m.id}, 'score', this.value)">
                     <div style="margin-top:8px; color:#006400;">
-                        Actual: <input type="text" value="${m.actual || ''}" placeholder="e.g. 2-0" 
-                                       onchange="updateActual(${m.id}, this.value)" style="width:100px;">
+                        Actual: <input type="text" value="${m.actual || ''}" placeholder="e.g. 2-0" onchange="updateActual(${m.id}, this.value)" style="width:100px;">
                     </div>
                 `;
                 list.appendChild(div);
@@ -215,59 +234,44 @@
             }
         }
 
-        // Scoring functions (same as before)
-        function parseScore(scoreStr) {
-            if (!scoreStr) return null;
-            const parts = scoreStr.split('-').map(s => parseInt(s.trim()));
-            return (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) ? parts : null;
+        function parseScore(s) {
+            if (!s) return null;
+            const p = s.split('-').map(x => parseInt(x.trim()));
+            return p.length === 2 && !isNaN(p[0]) ? p : null;
         }
 
-        function calculatePoints(playerPred, actualScoreStr, match) {
-            if (!playerPred.winner || !actualScoreStr) return 0;
-            const actualGoals = parseScore(actualScoreStr);
-            if (!actualGoals) return 0;
-
-            const actualHome = actualGoals[0];
-            const actualAway = actualGoals[1];
-            const actualOutcome = actualHome > actualAway ? match.team1 : (actualHome < actualAway ? match.team2 : "Draw");
-
-            let points = 0;
-            if ((playerPred.winner === match.team1 && actualOutcome === match.team1) ||
-                (playerPred.winner === match.team2 && actualOutcome === match.team2) ||
-                (playerPred.winner === "Draw" && actualOutcome === "Draw")) {
-                points += 3;
-            }
-
-            const predGoals = parseScore(playerPred.score);
-            if (predGoals && predGoals[0] === actualHome && predGoals[1] === actualAway) {
-                points += 2;
-            }
-            return points;
+        function calculatePoints(pred, actualStr, match) {
+            if (!pred.winner || !actualStr) return 0;
+            const goals = parseScore(actualStr);
+            if (!goals) return 0;
+            const outcome = goals[0] > goals[1] ? match.team1 : (goals[0] < goals[1] ? match.team2 : "Draw");
+            let pts = 0;
+            if ((pred.winner === match.team1 && outcome === match.team1) ||
+                (pred.winner === match.team2 && outcome === match.team2) ||
+                (pred.winner === "Draw" && outcome === "Draw")) pts += 3;
+            const predG = parseScore(pred.score);
+            if (predG && predG[0] === goals[0] && predG[1] === goals[1]) pts += 2;
+            return pts;
         }
 
         function calculateAndRenderLeaderboard() {
             const tbody = document.getElementById('leaderboardTable');
             tbody.innerHTML = `<tr><th>Rank</th><th>Player</th><th>Points</th></tr>`;
-
-            const playerPoints = players.map(player => {
+            const results = players.map(p => {
                 let total = 0;
-                if (predictions[player]) {
-                    Object.keys(predictions[player]).forEach(mid => {
-                        const pred = predictions[player][mid];
+                if (predictions[p]) {
+                    Object.keys(predictions[p]).forEach(mid => {
+                        const pred = predictions[p][mid];
                         const match = matches.find(m => m.id == mid);
-                        if (match && match.actual) {
-                            total += calculatePoints(pred, match.actual, match);
-                        }
+                        if (match && match.actual) total += calculatePoints(pred, match.actual, match);
                     });
                 }
-                return {player, points: total};
+                return {player: p, points: total};
             });
-
-            playerPoints.sort((a, b) => b.points - a.points);
-
-            playerPoints.forEach((entry, rank) => {
+            results.sort((a,b) => b.points - a.points);
+            results.forEach((r,i) => {
                 const row = document.createElement('tr');
-                row.innerHTML = `<td>${rank + 1}</td><td>${entry.player}</td><td style="font-weight:bold; color:#006400;">${entry.points}</td>`;
+                row.innerHTML = `<td>${i+1}</td><td>${r.player}</td><td style="font-weight:bold;color:#006400;">${r.points}</td>`;
                 tbody.appendChild(row);
             });
         }
@@ -275,15 +279,16 @@
         function openTab(n) {
             document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
             document.getElementById('tab' + n).classList.add('active');
-            document.querySelectorAll('.tab button').forEach((b, i) => b.classList.toggle('active', i === n));
+            document.querySelectorAll('.tab button').forEach((b,i) => b.classList.toggle('active', i===n));
             if (n === 1) loadPlayerPredictions();
-            if (n === 2) calculateAndRenderLeaderboard();
+            if (n === 2) {
+                document.getElementById('leaderboardContent').style.display = 'none';
+                document.getElementById('adminPassword').value = '';
+            }
         }
 
         window.onload = function() {
             initFirebase();
-            renderPlayers();
-            calculateAndRenderLeaderboard();
         };
     </script>
 </body>
