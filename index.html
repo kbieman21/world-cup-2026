@@ -60,19 +60,30 @@
     </div>
 
     <script>
-        // ==================== YOUR FIREBASE CONFIG ====================
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY_HERE",
-            authDomain: "your-project.firebaseapp.com",
-            databaseURL: "https://your-project-default-rtdb.firebaseio.com",
-            projectId: "your-project",
-            storageBucket: "your-project.appspot.com",
-            messagingSenderId: "123456789012",
-            appId: "1:123456789012:web:xxxxxxxxxxxxxxxx"
-        };
+        // // ==================== YOUR FIREBASE CONFIG ====================
+        // const firebaseConfig = {
+        //     apiKey: "YOUR_API_KEY_HERE",
+        //     authDomain: "your-project.firebaseapp.com",
+        //     databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+        //     projectId: "your-project",
+        //     storageBucket: "your-project.appspot.com",
+        //     messagingSenderId: "123456789012",
+        //     appId: "1:123456789012:web:xxxxxxxxxxxxxxxx"
+        // };
+         // Your web app's Firebase configuration
+            const firebaseConfig = {
+                apiKey: "AIzaSyDDy4VXUPWiOOZHZ2eiIt3qRVRgvjeET3E",
+                authDomain: "family-world-cup-2026-pool.firebaseapp.com",
+                databaseURL: "https://family-world-cup-2026-pool-default-rtdb.firebaseio.com",
+                projectId: "family-world-cup-2026-pool",
+                storageBucket: "family-world-cup-2026-pool.firebasestorage.app",
+                messagingSenderId: "615728714468",
+                appId: "1:615728714468:web:baa9835731188b334392f1"
+            };
+
         // ============================================================
 
-        const ADMIN_PASSWORD = "wanchaalem2026";   // ← CHANGE THIS TO YOUR SECRET PASSWORD
+        const ADMIN_PASSWORD = "wanchaalem2026";
 
         let app, db;
         let players = [];
@@ -86,13 +97,15 @@
         }
 
         function loadFromFirebase() {
+            // Players
             db.ref('players').on('value', (snap) => {
                 players = snap.val() || [];
-                renderPlayers();
+                renderPlayers();           // ← This was missing in some versions
             });
 
+            // Matches
             db.ref('matches').once('value', (snap) => {
-                if (!snap.exists() || snap.val().length === 0) {
+                if (!snap.exists() || !snap.val() || snap.val().length === 0) {
                     const defaults = [
                         {id:1, team1:"Mexico", team2:"South Africa", date:"June 11", actual:""},
                         {id:2, team1:"Korea Republic", team2:"Czechia", date:"June 11", actual:""},
@@ -106,8 +119,11 @@
                 }
             });
 
-            db.ref('matches').on('value', (snap) => { if (snap.val()) matches = snap.val(); });
+            db.ref('matches').on('value', (snap) => {
+                if (snap.val()) matches = snap.val();
+            });
 
+            // Predictions
             db.ref('predictions').on('value', (snap) => {
                 predictions = snap.val() || {};
             });
@@ -188,6 +204,7 @@
             }
         }
 
+        // Rest of functions (predictions, scoring, etc.)
         function loadPlayerPredictions() {
             const player = document.getElementById('currentPlayer').value;
             if (!player) return;
@@ -289,6 +306,10 @@
 
         window.onload = function() {
             initFirebase();
+            // Extra safety call
+            setTimeout(() => {
+                renderPlayers();
+            }, 800);
         };
     </script>
 </body>
